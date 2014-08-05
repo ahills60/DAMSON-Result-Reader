@@ -22,3 +22,7 @@ To generate a log file in Linux, run:
 ```bash
 damson script_name.d > script_results.log
 ```
+
+The result reader can handle functions with multiple inputs and these input arguments are stored as additional rows in the results cell array.
+
+This function also automatically plots the output of the discovered functions. For functions with multiple arguments, the argument which has the most unique values is used as the plot's x axis.
