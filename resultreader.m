@@ -127,6 +127,8 @@ for n = 1:size(results, 2)
                 truth = feval(funcnames{n}, results{2:(validRows + 1), n});
                 plot(results{idx + 1, n}, results{1, n}, results{idx + 1, n}, truth)
             end
+            
+            disp([funcnames{n} ' MSE: ' num2str(mean((results{1, n} - truth).^2))])
         catch
             % Didn't work. resort to plotting the file output.
             plot(results{2, n}, results{1, n});
