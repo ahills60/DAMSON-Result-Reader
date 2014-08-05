@@ -44,7 +44,7 @@ while ischar(fline)
     
     % If here, we have brackets too
     funcname = strtrim(func(1:(strfind(func, '(') - 1)));
-    funcof = str2double(strtrim(func((strfind(func, '(') + 1):(strfind(func, ')') - 1))));
+    funcof = strtrim(func((strfind(func, '(') + 1):(strfind(func, ')') - 1)));
     
     % Now tidy up the initial part of the expression:
     % Check for potential timestamp:
@@ -52,7 +52,7 @@ while ischar(fline)
         % There is a timestamp. Remove it.
         funcname = strtrim(funcname((strfind(funcname, ':') + 1):end));
     end
-    
+
     % Now there should only be the node number to process:
     for n = 1:length(funcname)
         % Keep going unless there's a character that's not a number
@@ -60,25 +60,38 @@ while ischar(fline)
             break;
         end
     end
-    
+
     % Extract the function name
     funcname = strtrim(funcname(n:end));
-    
+
     % Locate to see if this has previously occurred before
     bool = strcmp(funcname, funcnames);
     idx = find(bool);
-    
+
     if ~any(bool)
         % Not encountered before. Append
         funcnames = {funcnames{:}, funcname};
         idx = length(funcnames);
         results{1, idx} = [];
-        results{2, idx} = [];
+        for n = 2:(2 + length(strfind(funcof, ',')))
+            results{n, idx} = [];
+        end
     end
-    
+
     % Append result
-    results{1, idx} = [results{1, idx}, funcof];
-    results{2, idx} = [results{2, idx}, result];
+    if isempty(strfind(funcof, ','))
+        % Single argument
+        results{2, idx} = [results{2, idx}, str2double(funcof)];
+    else
+        % Multiple arguments
+        commaList = strfind(funcof, ',');
+        remain = funcof;
+        for n = 1:(length(strfind(funcof, ',')) + 1)
+            [token, remain] = strtok(remain, [', ' 10 13]);
+            results{n + 1, idx} = [results{n + 1, idx} str2double(token)];
+        end
+    end
+    results{1, idx} = [results{1, idx}, result];
     
     % Finally, read a line
     fline = fgetl(f);
@@ -93,15 +106,34 @@ for n = 1:size(results, 2)
     if exist(funcnames{n}) == 2 || exist(funcnames{n}) == 5
         % Recognised the function name. Try getting some data out of it.
         try
-            truth = feval(funcnames{n}, results{1, n});
-            plot(results{1, n}, results{2, n}, results{1, n}, truth);
+            if size(results, 1) == 2
+                truth = feval(funcnames{n}, results{2, n});
+                plot(results{2, n}, results{1, n}, results{2, n}, truth);
+            else
+                % Got to determine which of the rows is valid
+                for validRows = 1:(size(results, 1) - 1)
+                    if isempty(results{validRows + 1, n})
+                        break;
+                    end
+                end
+                
+                % Now out of these rows, determine which varies:
+                varRowsCounts = zeros(1, validRows);
+                for m = 2:(validRows + 1)
+                    varRowsCounts(m - 1) = length(unique(results{m, n}));
+                end
+                [~, idx] = max(varRowsCounts);
+                
+                truth = feval(funcnames{n}, results{2:(validRows + 1), n});
+                plot(results{idx + 1, n}, results{1, n}, results{idx + 1, n}, truth)
+            end
         catch
             % Didn't work. resort to plotting the file output.
-            plot(results{1, n}, results{2, n});
+            plot(results{2, n}, results{1, n});
         end
     else
         % Not recognised. Plot the file output only.
-        plot(results{1, n}, results{2, n});
+        plot(results{2, n}, results{1, n});
     end
     title(funcnames{n});
 end
