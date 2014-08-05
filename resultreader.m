@@ -135,7 +135,25 @@ for n = 1:size(results, 2)
         end
     else
         % Not recognised. Plot the file output only.
-        plot(results{2, n}, results{1, n});
+        if size(results, 1) == 2
+            plot(results{2, n}, results{1, n});
+        else
+            % Got to determine which of the rows is valid
+            for validRows = 1:(size(results, 1) - 1)
+                if isempty(results{validRows + 1, n})
+                    break;
+                end
+            end
+            
+            % Now out of these rows, determine which varies:
+            varRowsCounts = zeros(1, validRows);
+            for m = 2:(validRows + 1)
+                varRowsCounts(m - 1) = length(unique(results{m, n}));
+            end
+            [~, idx] = max(varRowsCounts);
+            
+            plot(results{idx + 1, n}, results{1, n})
+        end
     end
     title(funcnames{n});
 end
